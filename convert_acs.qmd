@@ -144,8 +144,6 @@ fname <- "ACSPUMS2019_2023CodeLists.xlsx"
 xpath <- fs::path(DACS52023, "documentation", fname)
 occsheet <- "OCCP & SOCP"
 
-# note there is not a code for 29-1181 Audiologists but they are in the data (291181)
-
 df1 <- read_excel(
   xpath,
   sheet = occsheet,
@@ -156,7 +154,20 @@ df1 <- read_excel(
 df2 <- df1 |>
   filter(!is.na(pumsocc)) |>
   filter(str_detect(pumsocc, "-", negate = TRUE)) |>
-  filter(str_detect(pumsocc, "Note|Highlight", negate = TRUE))
+  filter(str_detect(pumsocc, "Note|Highlight", negate = TRUE)) |>
+  arrange(pumsocc, sococc)
+
+# missing_codes <- read_csv(
+#   "pumsocc, sococc, description
+# 3140, 29-1181, Audiologists
+# "
+# )
+
+# are any codes are not unique?
+anyDuplicated(df2$pumsocc)
+anyDuplicated(df2$sococc)
+# no, good
+
 
 
 ```
@@ -176,6 +187,7 @@ DBI::dbDisconnect(acsdb)
 ## Explore
 
 ```{r}
+#| eval: false
 
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
 DBI::dbListTables(acsdb)
@@ -186,8 +198,6 @@ nyacs <- df |>
 
 soccodes <- count(nyacs, socp, sort = TRUE) |>
   as_tibble()
-
-# note there is not a code for 29-1181 Audiologists but they are in the data (291181)
 
 nurses <- nyacs |>
   dplyr::filter(str_sub(socp, 1, 2) == "29") |>
