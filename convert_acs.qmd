@@ -153,6 +153,11 @@ df1 <- read_excel(
   col_names = c("pumsocc", "sococc", "description")
 )
 
+df2 <- df1 |>
+  filter(!is.na(pumsocc)) |>
+  filter(str_detect(pumsocc, "-", negate = TRUE)) |>
+  filter(str_detect(pumsocc, "Note|Highlight", negate = TRUE))
+
 
 ```
 
