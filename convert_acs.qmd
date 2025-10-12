@@ -138,6 +138,23 @@ DBI::dbDisconnect(acsdb)
 
 ### Get occupation codes
 
+```{r}
+
+fname <- "ACSPUMS2019_2023CodeLists.xlsx"
+xpath <- fs::path(DACS52023, "documentation", fname)
+occsheet <- "OCCP & SOCP"
+
+# note there is not a code for 29-1181 Audiologists but they are in the data (291181)
+
+df1 <- read_excel(
+  xpath,
+  sheet = occsheet,
+  range = cellranger::cell_rows(c(11, NA)),
+  col_names = c("pumsocc", "sococc", "description")
+)
+
+
+```
 
 
 ## Check the database
@@ -147,6 +164,29 @@ DBI::dbDisconnect(acsdb)
 
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
 DBI::dbListTables(acsdb)
+DBI::dbDisconnect(acsdb)
+
+```
+
+## Explore
+
+```{r}
+
+acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+DBI::dbListTables(acsdb)
+
+df <- tbl(acsdb, "pus_5year2023")
+nyacs <- df |>
+  dplyr::filter(state == "36")
+
+soccodes <- count(nyacs, socp, sort = TRUE) |>
+  as_tibble()
+
+# note there is not a code for 29-1181 Audiologists but they are in the data (291181)
+
+nurses <- nyacs |>
+  dplyr::filter(str_sub(socp, 1, 2) == "29") |>
+  as_tibble()
 DBI::dbDisconnect(acsdb)
 
 ```
