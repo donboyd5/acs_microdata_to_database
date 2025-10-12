@@ -6,6 +6,10 @@ editor:
     canonical: true  
 ---
 
+# Convert ACS microdata and documentation to database tables
+
+## Setup
+
 ```{r}
 #| label: setup
 
@@ -68,13 +72,13 @@ zpath
 connections <- purrr::map(fnames, \(x) unz(zpath, x))
 
 # read and clean data ----
-df <- vroom(connections, id = "fname")
-count(df, fname)
+hrecs <- vroom(connections, id = "fname")
+count(hrecs, fname)
 
-df2 <- df |>
+hrecs2 <- hrecs |>
   rename_with(str_to_lower) |>
   mutate(fname = str_replace(fname, ".*:", ""))
-count(df2, fname)
+count(hrecs2, fname)
 
 # end reading and cleaning data ---
 
@@ -87,7 +91,7 @@ count(df2, fname)
 # note that we save to the master database for all ACS 5-year-file years
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
 DBI::dbListTables(acsdb)
-DBI::dbWriteTable(acsdb, "hus_5year2023", df2)
+DBI::dbWriteTable(acsdb, "hus_5year2023", hrecs2)
 DBI::dbListTables(acsdb)
 DBI::dbDisconnect(acsdb)
 
@@ -100,31 +104,41 @@ DBI::dbDisconnect(acsdb)
 #| eval: false
 
 zfn <- "csv_pus.zip" # has a, b, c, d e.g., c is psam_pusc.csv
-zpath <- fs::path(DACS, zfn)
+zpath <- fs::path(DACS52023, zfn)
 zpath
 
-fnames <- unzip(zpath, list = TRUE)$Name |> str_subset(".csv")
+(fnames <- unzip(zpath, list = TRUE)$Name |> str_subset(".csv"))
 connections <- purrr::map(fnames, \(x) unz(zpath, x))
-df <- vroom(connections, id = "fname")
-count(df, fname)
 
-df2 <- df |>
+# read and clean person records ----
+precs <- vroom(connections, id = "fname")
+count(precs, fname)
+
+precs2 <- precs |>
   rename_with(str_to_lower) |>
   mutate(fname = str_replace(fname, ".*:", ""))
-count(df2, fname)
+count(precs2, fname)
 
+# end read and clean person records ----
 
-path_duckdb <- fs::path(DACS, ACSDB)
-con <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
-DBI::dbWriteTable(con, "pus_5year2023", df2)
-DBI::dbDisconnect(con)
+```
 
-path_duckdb <- fs::path(DACS, ACSDB)
+```{r}
+#| label: ONETIME-save-persons-to-database
+#| eval: false
+
+# note that we save to the master database for all ACS 5-year-file years
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+DBI::dbListTables(acsdb)
+DBI::dbWriteTable(acsdb, "pus_5year2023", precs2)
 DBI::dbListTables(acsdb)
 DBI::dbDisconnect(acsdb)
 
 ```
+
+### Get occupation codes
+
+
 
 ## Check the database
 
