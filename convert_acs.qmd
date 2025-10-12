@@ -91,7 +91,6 @@ DBI::dbWriteTable(acsdb, "hus_5year2023", df2)
 DBI::dbListTables(acsdb)
 DBI::dbDisconnect(acsdb)
 
-
 ```
 
 ### Person records
