@@ -144,33 +144,40 @@ fname <- "ACSPUMS2019_2023CodeLists.xlsx"
 xpath <- fs::path(DACS52023, "documentation", fname)
 occsheet <- "OCCP & SOCP"
 
-df1 <- read_excel(
+occ1 <- read_excel(
   xpath,
   sheet = occsheet,
   range = cellranger::cell_rows(c(11, NA)),
   col_names = c("pumsocc", "sococc", "description")
 )
 
-df2 <- df1 |>
+occ2 <- occ1 |>
   filter(!is.na(pumsocc)) |>
   filter(str_detect(pumsocc, "-", negate = TRUE)) |>
   filter(str_detect(pumsocc, "Note|Highlight", negate = TRUE)) |>
   arrange(pumsocc, sococc)
 
-# missing_codes <- read_csv(
-#   "pumsocc, sococc, description
-# 3140, 29-1181, Audiologists
-# "
-# )
-
 # are any codes are not unique?
-anyDuplicated(df2$pumsocc)
-anyDuplicated(df2$sococc)
+anyDuplicated(occ2$pumsocc)
+anyDuplicated(occ2$sococc)
 # no, good
 
-df3 <- df2 |> 
-  mutate(socp = str_remove(sococc, "-")) |> 
+occ3 <- occ2 |>
+  mutate(socp = str_remove(sococc, "-")) |>
   relocate(socp, .after = sococc)
+
+```
+
+```{r}
+#| label: ONETIME-save-occupation-codes-to-database
+#| eval: false
+
+# note that we save to the master database for all ACS 5-year-file years
+acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+DBI::dbListTables(acsdb)
+DBI::dbWriteTable(acsdb, "occcodes_5year2023", occ3)
+DBI::dbListTables(acsdb)
+DBI::dbDisconnect(acsdb)
 
 ```
 
