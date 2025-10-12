@@ -1,0 +1,175 @@
+---
+editor_options: 
+  chunk_output_type: console
+editor:
+  markdown:
+    canonical: true  
+---
+
+```{r}
+#| label: setup
+
+tprint <- 75 # default tibble print
+options(tibble.print_max = tprint, tibble.print_min = tprint)
+
+library(rlang)
+library(here)
+library(rprojroot)
+library(this.path)
+library(lintr)
+library(styler)
+library(btools)
+
+library(tidyverse)
+library(dplyr) # dplyr functions included with tidyverse, only if specifically loaded elsewhere
+# remotes::install_github("JanMarvin/openxlsx2")
+library(openxlsx2) # for writing xlsx files
+library(readxl)
+library(vroom)
+library(fs)
+library(skimr)
+library(Hmisc)
+library(lubridate)
+library(formattable)
+library(janitor)
+library(vtable)
+library(quarto)
+
+# https://duckplyr.tidyverse.org/
+library(dbplyr)
+library(DBI)
+library(duckplyr)
+
+```
+
+```{r}
+#| label: locations
+
+DACS5 <- r"(D:\data\acs\5year)"
+DACS52023 <- fs::path(DACS5, "2023")
+ACSDB <- "acs5year.duckdb"
+path_duckdb <- fs::path(DACS5, ACSDB)
+
+```
+
+## 2023 data
+
+### Household records
+
+```{r}
+#| label: ONETIME-read-clean-hus
+#| eval: false
+
+zfn <- "csv_hus.zip" # has a, b, c, d e.g., c is psam_pusc.csv
+zpath <- fs::path(DACS52023, zfn)
+zpath
+
+(fnames <- utils::unzip(zpath, list = TRUE)$Name |> str_subset(".csv"))
+connections <- purrr::map(fnames, \(x) unz(zpath, x))
+
+# read and clean data ----
+df <- vroom(connections, id = "fname")
+count(df, fname)
+
+df2 <- df |>
+  rename_with(str_to_lower) |>
+  mutate(fname = str_replace(fname, ".*:", ""))
+count(df2, fname)
+
+# end reading and cleaning data ---
+
+```
+
+```{r}
+#| label: ONETIME-save-household-to-database
+#| eval: false
+
+# note that we save to the master database for all ACS 5-year-file years
+acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+DBI::dbListTables(acsdb)
+DBI::dbWriteTable(acsdb, "hus_5year2023", df2)
+DBI::dbListTables(acsdb)
+DBI::dbDisconnect(acsdb)
+
+
+```
+
+### Person records
+
+```{r}
+#| label: ONETIME-read-clean-pus
+#| eval: false
+
+zfn <- "csv_pus.zip" # has a, b, c, d e.g., c is psam_pusc.csv
+zpath <- fs::path(DACS, zfn)
+zpath
+
+fnames <- unzip(zpath, list = TRUE)$Name |> str_subset(".csv")
+connections <- purrr::map(fnames, \(x) unz(zpath, x))
+df <- vroom(connections, id = "fname")
+count(df, fname)
+
+df2 <- df |>
+  rename_with(str_to_lower) |>
+  mutate(fname = str_replace(fname, ".*:", ""))
+count(df2, fname)
+
+
+path_duckdb <- fs::path(DACS, ACSDB)
+con <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+DBI::dbWriteTable(con, "pus_5year2023", df2)
+DBI::dbDisconnect(con)
+
+path_duckdb <- fs::path(DACS, ACSDB)
+acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+DBI::dbListTables(acsdb)
+DBI::dbDisconnect(acsdb)
+
+```
+
+## Check the database
+
+```{r}
+#| label: checks
+
+acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+DBI::dbListTables(acsdb)
+DBI::dbDisconnect(acsdb)
+
+```
+
+## Old code
+
+```{r}
+#| label: code-info
+#| eval: false
+
+# acsdb <- DBI::dbConnect(RSQLite::SQLite(), fs::path(DACS, "acs.sqlite"))
+# DBI::dbWriteTable(acsdb, "pus", df2)
+# DBI::dbListTables(acsdb)
+# # DBI::dbExecute(acsdb, "ALTER TABLE pus RENAME TO pus_5year2023;")
+# DBI::dbDisconnect(acsdb)
+
+# con <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+# DBI::dbListTables(con)
+# DBI::dbExecute(con, "ALTER TABLE data RENAME TO pus_5year2023;")
+# DBI::dbDisconnect(con)
+
+# renamed original files from Martin from td15.zip to td15_pw.zip (for password, etc.)
+# gzpre <- "td"
+# gzsfx <- ".zip"
+# gzfiles <- paste0(gzpre, c(15, 21, 23), gzsfx)
+# (gzpaths <- path(dtdfiles, gzfiles))
+
+# use this when we have year on the data files, but not until then
+# tctd <- open_dataset(
+#   # sources = fs::path(dyfiles, "tax_microdata_2015.csv.gz"),
+#   sources = gzpaths,
+#   col_types = schema(ISBN = string()),
+#   format = "csv"
+# )
+# count(tctd, FLPDYR) |> collect()
+
+# df1 <- vroom(gzpaths, id = "fname")
+
+```
