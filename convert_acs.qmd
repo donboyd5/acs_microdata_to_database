@@ -20,8 +20,8 @@ library(rlang)
 library(here)
 library(rprojroot)
 library(this.path)
-library(lintr)
-library(styler)
+# library(lintr)
+# library(styler)
 library(btools)
 
 library(tidyverse)
@@ -139,6 +139,7 @@ DBI::dbDisconnect(acsdb)
 ### Get occupation codes
 
 ```{r}
+#| label: prepare-occ-codes
 
 fname <- "ACSPUMS2019_2023CodeLists.xlsx"
 xpath <- fs::path(DACS52023, "documentation", fname)
@@ -181,11 +182,39 @@ DBI::dbDisconnect(acsdb)
 
 ```
 
-
-## Check the database
-
 ```{r}
-#| label: checks
+#| label: check-occ-codes
+
+acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+DBI::dbListTables(acsdb)
+
+pocc <- tbl(acsdb, "pus_5year2023") |> 
+  filter(!is.na(socp)) |> 
+  select(socp) |> 
+  dplyr::distinct() |> 
+  mutate(src="person") |> 
+  arrange(socp) |> 
+  as_tibble() # person occ codes
+
+socc <- tbl(acsdb, "occcodes_5year2023") |> 
+  as_tibble()
+
+# how well do they merge?
+
+check <- socc |> 
+  left_join(pocc, by = join_by(socp))
+
+check |> 
+  filter(is.na(src))
+# good, all match
+
+```
+  
+  
+  ## Check the database
+  
+  ```{r}
+  #| label: checks
 
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
 DBI::dbListTables(acsdb)
