@@ -168,7 +168,9 @@ anyDuplicated(df2$pumsocc)
 anyDuplicated(df2$sococc)
 # no, good
 
-
+df3 <- df2 |> 
+  mutate(socp = str_remove(sococc, "-")) |> 
+  relocate(socp, .after = sococc)
 
 ```
 
