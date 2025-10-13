@@ -170,7 +170,7 @@ count(precs2, fname)
 
 ```{r}
 #| label: ONETIME-save-persons-to-database
-#| eval: false
+#| eval: true
 
 # note that we save to the master database for all ACS 5-year-file years
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
@@ -216,7 +216,7 @@ occ3 <- occ2 |>
 
 ```{r}
 #| label: ONETIME-save-occupation-codes-to-database
-#| eval: false
+#| eval: true
 
 # note that we save to the master database for all ACS 5-year-file years
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
