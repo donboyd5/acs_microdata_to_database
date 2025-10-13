@@ -258,7 +258,7 @@ check |>
   
   ## Check the database
   
-  ```{r}
+```{r}
   #| label: checks
 
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
