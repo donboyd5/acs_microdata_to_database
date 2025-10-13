@@ -65,7 +65,7 @@ TODO: make sure variable types are what we want, instead of letting vroom decide
 
 ```{r}
 #| label: ONETIME-read-clean-hus
-#| eval: false
+#| eval: true
 
 zfn <- "csv_hus.zip" # has a, b, c, d e.g., c is psam_pusc.csv
 zpath <- fs::path(DACS52023, zfn)
@@ -91,17 +91,18 @@ a <- proc.time()
 hrecs <- vroom(connections, id = "fname", col_types = colspec) # 30 secs for my defs
 b <- proc.time()
 b - a
-glimpse(hrecs)
-summary(hrecs)
+# glimpse(hrecs)
+# summary(hrecs)
 
 hrecs2 <- hrecs |>
   rename_with(str_to_lower) |>
   mutate(fname = str_replace(fname, ".*:", "")) |> 
-  mutate(adjhsg=adjhsg / 1000, adjinc=adjinc / 1000)
+  mutate(adjhsg=adjhsg / 1e6, adjinc=adjinc / 1e6)
 ns(hrecs2)
 count(hrecs2, fname)
-system.time(summary(hrecs2)) # ~ 32 secs
-system.time(missing_counts <- colSums(is.na(hrecs2))) # 10 secs
+# system.time(summary(hrecs2)) # ~ 32 secs
+# system.time(missing_counts <- colSums(is.na(hrecs2))) # 10 secs
+# missing_counts
 
 count(hrecs2, accessinet)
 count(hrecs2, cplt)
@@ -127,22 +128,40 @@ DBI::dbDisconnect(acsdb)
 
 ```{r}
 #| label: ONETIME-read-clean-pus
-#| eval: false
+#| eval: true
 
 zfn <- "csv_pus.zip" # has a, b, c, d e.g., c is psam_pusc.csv
 zpath <- fs::path(DACS52023, zfn)
 zpath
 
 (fnames <- unzip(zpath, list = TRUE)$Name |> str_subset(".csv"))
-connections <- purrr::map(fnames, \(x) unz(zpath, x))
 
-# read and clean person records ----
-precs <- vroom(connections, id = "fname")
-count(precs, fname)
+# make as many columns as possible integer - selectively making others character or numeric
+# REMEMBER that long code lists (eg., occ codes) could have a character in them!!
+char_vars <- c("RT", "SERIALNO", "NAICSP", "SOCP")
+char_list <- setNames(rep(list(col_character()), length(char_vars)), char_vars)
+# only create numeric (as opposed to integer) variables that might exceed integer limit of ~ 2.1 billion
+num_vars <- c("ADJINC", "PINCP")
+# make weight variables WGTP numeric by conversion, later
+num_list <- setNames(rep(list(col_number()), length(num_vars)), num_vars)
+
+colspec <- do.call(cols, c(char_list, num_list, list(.default = col_integer())))
+colspec
+
+
+connections <- purrr::map(fnames, \(x) unz(zpath, x))
+# hrecs <- vroom(connections, id = "fname", n_max=5, col_types = colspec)
+a <- proc.time()
+precs <- vroom(connections, id = "fname", col_types = colspec) # 30 secs for my defs
+b <- proc.time()
+b - a # ~ 75 secs
+# glimpse(precs)
+# summary(precs)
 
 precs2 <- precs |>
   rename_with(str_to_lower) |>
-  mutate(fname = str_replace(fname, ".*:", ""))
+  mutate(fname = str_replace(fname, ".*:", ""), adjinc = adjinc / 1e6)
+
 count(precs2, fname)
 
 # end read and clean person records ----
@@ -156,7 +175,7 @@ count(precs2, fname)
 # note that we save to the master database for all ACS 5-year-file years
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
 DBI::dbListTables(acsdb)
-DBI::dbWriteTable(acsdb, "pus_5year2023", precs2)
+system.time(DBI::dbWriteTable(acsdb, "pus_5year2023", precs2, overwrite=TRUE))
 DBI::dbListTables(acsdb)
 DBI::dbDisconnect(acsdb)
 
@@ -202,7 +221,7 @@ occ3 <- occ2 |>
 # note that we save to the master database for all ACS 5-year-file years
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
 DBI::dbListTables(acsdb)
-DBI::dbWriteTable(acsdb, "occcodes_5year2023", occ3)
+DBI::dbWriteTable(acsdb, "occcodes_5year2023", occ3, overwrite=TRUE)
 DBI::dbListTables(acsdb)
 DBI::dbDisconnect(acsdb)
 
@@ -267,6 +286,12 @@ nurses <- nyacs |>
   dplyr::filter(str_sub(socp, 1, 2) == "29") |>
   as_tibble()
 DBI::dbDisconnect(acsdb)
+
+ny <- tbl(acsdb, "hus_5year2023") |> 
+  dplyr::filter(state==36) |> 
+  select(1:20) |> 
+  as_tibble()
+glimpse(ny)
 
 ```
 
