@@ -113,7 +113,7 @@ count(hrecs2, cplt)
 
 ```{r}
 #| label: ONETIME-save-household-to-database
-#| eval: false
+#| eval: true
 
 # note that we save to the master database for all ACS 5-year-file years
 acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
