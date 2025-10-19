@@ -58,82 +58,7 @@ path_duckdb <- fs::path(DACS5, ACSDB)
 
 ```
 
-## 2020 PUMA codes
-
-Oddly there doesn't seem to be a good computerized version of 2020 PUMA codes and names. I found an [html table on the Census tigerweb site](https://tigerweb.geo.census.gov/tigerwebmain/Files/acs25/tigerweb_acs25_puma_2020_tab20_us.html). I copied it into an Excel file and put it in the "derived_documentation" folder of this project so that it will be included in pushes to github.
-
-This section reads the file and puts it into the ACS database.
-
-```{r}
-#| label: get-puma-codes
-
-DDOC <- here::here("derived_documentation")
-fname <- "puma2020_codelist.xlsx"
-fpath <- fs::path(DDOC, fname)
-
-pumacodes1 <- read_excel(
-  fpath,
-  sheet = "puma2020",
-  skip = 1,
-  col_types = "text"
-)
-count(pumacodes1, STATE)
-# can't convert these next 2 to numeric as they have character values
-count(pumacodes1, LSADC)
-count(pumacodes1, FUNCSTAT)
-
-pumacodes2 <- pumacodes1 |>
-  rename_with(tolower) |>
-  mutate(
-    across(c(state, pumace), as.integer),
-    across(
-      c(
-        pop100,
-        hu100,
-        arealand,
-        areawater,
-        centlat,
-        centlon,
-        intptlat,
-        intptlon
-      ),
-      as.numeric
-    )
-  )
-summary(pumacodes2)
-skimr::skim_without_charts(pumacodes2) # make sure NO missing values from the numeric conversion
-
-# rename as needed
-pumacodes3 <- pumacodes2 |>
-  rename(pumaname = name, puma = pumace)
-
-nycheck <- pumacodes3 |> filter(state == 36) # 144 rows
-
-```
-
-```{r}
-#| label: ONETIME-save-household-to-database
-#| eval: true
-
-# note that we save to the master database for all ACS 5-year-file years
-acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
-DBI::dbListTables(acsdb)
-DBI::dbWriteTable(
-  acsdb,
-  "pumacodes_2020",
-  pumacodes3,
-  overwrite = TRUE
-)
-DBI::dbListTables(acsdb)
-DBI::dbDisconnect(acsdb)
-
-```
-
-
 ## 2023 data
-
-TODO: make sure variable types are what we want, instead of letting vroom decide what they are
-
 
 ### Household records
 
@@ -186,7 +111,7 @@ count(hrecs2, cplt)
 ```
 
 ```{r}
-#| label: ONETIME-save-household-to-database
+#| label: ONETIME-save-households-to-database
 #| eval: true
 
 # note that we save to the master database for all ACS 5-year-file years
@@ -255,7 +180,85 @@ DBI::dbDisconnect(acsdb)
 
 ```
 
-### Get occupation codes
+
+## 2023 data codes
+
+## Data code list
+
+
+## 2020 PUMA codes -- for ACS 5-year 2019-2023 but ALSO for some other years
+
+Oddly there doesn't seem to be a good computerized version of 2020 PUMA codes and names. I found an [html table on the Census tigerweb site](https://tigerweb.geo.census.gov/tigerwebmain/Files/acs25/tigerweb_acs25_puma_2020_tab20_us.html). I copied it into an Excel file and put it in the "derived_documentation" folder of this project so that it will be included in pushes to github.
+
+This section reads the file and puts it into the ACS database.
+
+```{r}
+#| label: get-puma-codes
+
+DDOC <- here::here("derived_documentation")
+fname <- "puma2020_codelist.xlsx"
+fpath <- fs::path(DDOC, fname)
+
+pumacodes1 <- read_excel(
+  fpath,
+  sheet = "puma2020",
+  skip = 1,
+  col_types = "text"
+)
+count(pumacodes1, STATE)
+# can't convert these next 2 to numeric as they have character values
+count(pumacodes1, LSADC)
+count(pumacodes1, FUNCSTAT)
+
+pumacodes2 <- pumacodes1 |>
+  rename_with(tolower) |>
+  mutate(
+    across(c(state, pumace), as.integer),
+    across(
+      c(
+        pop100,
+        hu100,
+        arealand,
+        areawater,
+        centlat,
+        centlon,
+        intptlat,
+        intptlon
+      ),
+      as.numeric
+    )
+  )
+summary(pumacodes2)
+skimr::skim_without_charts(pumacodes2) # make sure NO missing values from the numeric conversion
+
+# rename as needed
+pumacodes3 <- pumacodes2 |>
+  rename(pumaname = name, puma = pumace)
+
+nycheck <- pumacodes3 |> filter(state == 36) # 144 rows
+
+```
+
+```{r}
+#| label: ONETIME-save-pumacodes-to-database
+#| eval: true
+
+# note that we save to the master database for all ACS 5-year-file years
+acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+DBI::dbListTables(acsdb)
+DBI::dbWriteTable(
+  acsdb,
+  "pumacodes_2020",
+  pumacodes3,
+  overwrite = TRUE
+)
+DBI::dbListTables(acsdb)
+DBI::dbDisconnect(acsdb)
+
+```
+
+
+## Get socp occupation codes
 
 ```{r}
 #| label: prepare-occ-codes
