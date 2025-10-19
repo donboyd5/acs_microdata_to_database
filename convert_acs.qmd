@@ -183,10 +183,10 @@ DBI::dbDisconnect(acsdb)
 
 ## 2023 data codes
 
-## Data code list
+### 2023 Data code list
 
 
-## 2020 PUMA codes -- for ACS 5-year 2019-2023 but ALSO for some other years
+### 2020 PUMA codes -- for ACS 5-year 2019-2023 but ALSO for some other years
 
 Oddly there doesn't seem to be a good computerized version of 2020 PUMA codes and names. I found an [html table on the Census tigerweb site](https://tigerweb.geo.census.gov/tigerwebmain/Files/acs25/tigerweb_acs25_puma_2020_tab20_us.html). I copied it into an Excel file and put it in the "derived_documentation" folder of this project so that it will be included in pushes to github.
 
@@ -258,7 +258,7 @@ DBI::dbDisconnect(acsdb)
 ```
 
 
-## Get socp occupation codes
+### Get socp occupation codes
 
 ```{r}
 #| label: prepare-occ-codes
