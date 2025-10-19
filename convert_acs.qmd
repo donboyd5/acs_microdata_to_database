@@ -185,6 +185,80 @@ DBI::dbDisconnect(acsdb)
 
 ### 2023 Data code list
 
+```{r}
+#| label: read-full-codes-list
+
+# 2019_2023ACS_PUMS_User_Guide.pdf
+# lines starting with “NAME” contain 5 variables and is equivalent to the first two lines in the PDF example
+# Lines starting with “VAL” have 7 variables and include the variable starting and ending values and labels
+
+# PUMS Variables in Data Dictionary CSV File
+# Position Variable Description
+# 1 Identifying Flag (ID flag) “NAME” for information about the variable“VAL” for values of the variable
+# 2 PUMS Variable Name PUMS variable name (e.g. RT, SERIALNO,
+# AGEP, etc.)
+# 3 Variable Type“C” for Character variable“N” for Numeric variableNote: most variables are character variables
+# 4 Length Length of PUMS variable
+# 5 Descriptive Title /
+# Starting Legal ValueDescriptive Title (ID Flag = “NAME”)Starting value for variable value range(ID Flag = “VAL”)
+# 6 Ending Legal Value Ending value for value variable range(ID Flag = “VAL”)
+# 7 Description Descriptive name(ID Flag = “VAL”)
+
+fname <- "PUMS_Data_Dictionary_2019-2023.csv"
+fpath <- fs::path(DACS52023, "documentation", fname)
+
+cnames <- c(
+  "idflag",
+  "vname",
+  "vtype",
+  "vlength",
+  "vars5to7"
+)
+codes1 <- vroom(fpath, col_names = cnames, col_types = "ccccc")
+
+codes2 <- codes1 |>
+  mutate(vdesc = ifelse(idflag == "NAME", vars5to7, NA_character_)) |>
+  fill(vdesc, .direction = "down") |>
+  relocate(vdesc, .after = vname) |>
+  filter(idflag == "VAL") |>
+  select(-idflag)
+skimr::skim_without_charts(codes2)
+
+codes3 <- codes2 |>
+  separate_wider_delim(
+    vars5to7,
+    delim = ",",
+    names = c("start", "end", "vlabel"),
+    too_many = "merge",
+    cols_remove = FALSE
+  )
+
+codes4 <- codes3 |>
+  mutate(
+    haslabels = start == end,
+    vvalue = ifelse(haslabels, start, NA_character_)
+  ) |>
+  relocate(haslabels) |>
+  relocate(vvalue, .before = vlabel)
+
+codes5 <- codes4 |>
+  select(-c(start, end, vars5to7)) |>
+  mutate(vname = str_to_lower(vname))
+
+```
+
+```{r}
+#| label: ONETIME-save-occupation-codes-to-database
+#| eval: true
+
+# note that we save to the master database for all ACS 5-year-file years
+acsdb <- DBI::dbConnect(duckdb::duckdb(path_duckdb))
+DBI::dbListTables(acsdb)
+DBI::dbWriteTable(acsdb, "codeslist_5year2023", codes5, overwrite = TRUE)
+DBI::dbListTables(acsdb)
+DBI::dbDisconnect(acsdb)
+
+```
 
 ### 2020 PUMA codes -- for ACS 5-year 2019-2023 but ALSO for some other years
 
@@ -258,7 +332,7 @@ DBI::dbDisconnect(acsdb)
 ```
 
 
-### Get socp occupation codes
+### Get ACS 2023 socp occupation codes
 
 ```{r}
 #| label: prepare-occ-codes
